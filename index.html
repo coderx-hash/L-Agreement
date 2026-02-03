@@ -79,18 +79,19 @@
             #printable-area { display: block; background: white; color: black; font-size: 12px; }
             
             .doc-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
-            .doc-section { margin-bottom: 25px; }
+            .doc-section { margin-bottom: 20px; }
             .doc-section h3 { border-left: 4px solid #000; padding-left: 10px; font-size: 14px; margin-bottom: 10px; background: #f2f2f2; padding-top: 5px; padding-bottom: 5px; }
             
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            table th, table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             table th { background: #f9f9f9; }
 
-            .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 60px; }
+            .penalty-text { color: #b21f1f; font-weight: bold; font-style: italic; }
+
+            .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 50px; }
             .sig-line { border-top: 1px solid black; text-align: center; padding-top: 5px; font-weight: bold; }
         }
 
-        /* Responsive Mobile Adjustments */
         @media (max-width: 600px) {
             .grid-2 { grid-template-columns: 1fr; }
         }
@@ -127,18 +128,24 @@
 
     <div class="grid-2">
         <div class="input-group">
-            <label>Principal Amount ($)</label>
-            <input type="number" id="principal" placeholder="0.00" oninput="updateData()">
+            <label>Principal Amount (PHP)</label>
+            <input type="text" id="principal" placeholder="0.00" inputmode="decimal" oninput="formatInput(this); updateData()">
         </div>
+        <div class="input-group">
+            <label>Loan Duration (Months)</label>
+            <input type="number" id="months" value="1" oninput="updateData()">
+        </div>
+    </div>
+
+    <div class="grid-2">
         <div class="input-group">
             <label>Interest Rate (%)</label>
             <input type="number" id="interestRate" value="20" oninput="updateData()">
         </div>
-    </div>
-
-    <div class="input-group">
-        <label>Loan Duration (Months)</label>
-        <input type="number" id="months" value="1" oninput="updateData()">
+        <div class="input-group">
+            <label style="color: #b21f1f;">Penalty Rate on Delay (%)</label>
+            <input type="number" id="penaltyRate" value="5" oninput="updateData()">
+        </div>
     </div>
 
     <button class="btn-print" onclick="window.print()">
@@ -160,15 +167,15 @@
     </div>
 
     <div class="doc-section">
-        <h3>II. LOAN TERMS</h3>
+        <h3>II. LOAN TERMS & FINANCIALS</h3>
         <table>
             <tr>
-                <th>Principal Amount</th>
+                <th width="40%">Principal Amount</th>
                 <td><span id="p-principal">0.00</span></td>
             </tr>
             <tr>
-                <th>Interest Rate (%)</th>
-                <td><span id="p-rate">20</span>%</td>
+                <th>Interest Rate</th>
+                <td><span id="p-rate">20</span>% (Fixed)</td>
             </tr>
             <tr>
                 <th>Interest Amount</th>
@@ -177,6 +184,12 @@
             <tr>
                 <th><strong>TOTAL REPAYMENT</strong></th>
                 <td><strong><span id="p-total">0.00</span></strong></td>
+            </tr>
+            <tr>
+                <th style="color: #b21f1f;">Penalty on Delay (If applicable)</th>
+                <td class="penalty-text">
+                    <span id="p-penalty-rate">5</span>% (<span id="p-penalty-amount">0.00</span>) of Principal
+                </td>
             </tr>
         </table>
     </div>
@@ -193,12 +206,24 @@
                 </tr>
             </thead>
             <tbody id="p-schedule-body">
-                </tbody>
+            </tbody>
         </table>
     </div>
 
     <div class="doc-section">
-        <p style="font-size: 10px; color: #555;">By signing this document, the borrower acknowledges the receipt of the principal amount and agrees to the terms and interest rates stated above.</p>
+        <h3>IV. PENALTY CLAUSE</h3>
+        <p style="text-align: justify;">
+            In case of failure to pay any installment on its due date, the Borrower agrees to pay a penalty charge of 
+            <strong><span id="p-text-penalty-rate">5</span>%</strong> of the Principal Amount, equivalent to 
+            <strong><span id="p-text-penalty-amt">0.00</span></strong>, for every month of delay (or a fraction thereof). 
+            This is in addition to the regular interest and principal amortization.
+        </p>
+    </div>
+
+    <div class="doc-section">
+        <p style="font-size: 10px; color: #555; margin-top: 30px;">
+            By signing this document, the borrower acknowledges the receipt of the principal amount and agrees to the terms, interest rates, and penalty clauses stated above.
+        </p>
     </div>
 
     <div class="signature-grid">
@@ -208,33 +233,80 @@
 </div>
 
 <script>
+    // --- Helper to format number with commas while typing ---
+    function formatInput(input) {
+        // Remove existing commas to get raw value
+        let value = input.value.replace(/,/g, '');
+        
+        // Ensure only numbers and one dot
+        if(isNaN(value) && value !== '.') {
+           value = value.replace(/[^0-9.]/g, ''); 
+        }
+
+        // Split integer and decimal parts
+        const parts = value.split('.');
+        
+        // Add commas to integer part
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        
+        // Join back
+        input.value = parts.join('.');
+    }
+
+    // --- Helper to get clean number for calculation ---
+    function getCleanNumber(id) {
+        const val = document.getElementById(id).value;
+        // Remove commas before parsing to float
+        return parseFloat(val.replace(/,/g, '')) || 0;
+    }
+
     function updateData() {
+        // Get Values
         const name = document.getElementById('name').value;
         const address = document.getElementById('address').value;
         const contact = document.getElementById('contact').value;
-        const principal = parseFloat(document.getElementById('principal').value) || 0;
+        
+        // Use clean number function for Principal
+        const principal = getCleanNumber('principal');
         const rate = parseFloat(document.getElementById('interestRate').value) || 0;
+        const penaltyRate = parseFloat(document.getElementById('penaltyRate').value) || 0;
         const months = parseFloat(document.getElementById('months').value) || 0;
         const startDate = document.getElementById('startDate').value;
 
+        // Calculations
         const interest = principal * (rate / 100);
         const total = principal + interest;
         const installments = months * 2;
         const perPeriod = installments > 0 ? total / installments : 0;
+        
+        // Calculate Penalty Amount (Based on Principal)
+        const penaltyAmount = principal * (penaltyRate / 100);
 
-        // Update Labels
+        // Update Labels in Print View
         document.getElementById('p-current-date').innerText = new Date().toLocaleDateString('en-US', {dateStyle: 'long'});
         document.getElementById('p-name').innerText = name.toUpperCase();
         document.getElementById('p-address').innerText = address;
         document.getElementById('p-contact').innerText = contact;
-        document.getElementById('p-principal').innerText = principal.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
+        
+        // Currency Formatting
+        const formatMoney = (amount) => amount.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
+
+        document.getElementById('p-principal').innerText = formatMoney(principal);
         document.getElementById('p-rate').innerText = rate;
-        document.getElementById('p-interest').innerText = interest.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
-        document.getElementById('p-total').innerText = total.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
-        document.getElementById('p-semi').innerText = perPeriod.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
+        document.getElementById('p-interest').innerText = formatMoney(interest);
+        document.getElementById('p-total').innerText = formatMoney(total);
+        document.getElementById('p-semi').innerText = formatMoney(perPeriod);
         document.getElementById('p-start').innerText = startDate ? new Date(startDate).toLocaleDateString('en-US', {dateStyle: 'long'}) : '---';
 
-        // Generate Schedule
+        // Update Penalty Information
+        document.getElementById('p-penalty-rate').innerText = penaltyRate;
+        document.getElementById('p-penalty-amount').innerText = formatMoney(penaltyAmount);
+        
+        // Update Text Clause
+        document.getElementById('p-text-penalty-rate').innerText = penaltyRate;
+        document.getElementById('p-text-penalty-amt').innerText = formatMoney(penaltyAmount);
+
+        // Generate Schedule Table
         const tableBody = document.getElementById('p-schedule-body');
         tableBody.innerHTML = '';
 
@@ -244,17 +316,17 @@
                 const row = `<tr>
                     <td>Installment ${i}</td>
                     <td>${currentDate.toLocaleDateString('en-US', {dateStyle: 'medium'})}</td>
-                    <td>${perPeriod.toLocaleString('en-US', {style: 'currency', currency: 'PHP'})}</td>
+                    <td>${formatMoney(perPeriod)}</td>
                 </tr>`;
                 tableBody.innerHTML += row;
                 
-                // Add 15 days for next installment
+                // Add 15 days
                 currentDate.setDate(currentDate.getDate() + 15);
             }
         }
     }
 
-    // Set Default Date to Today
+    // Initialize on load
     window.onload = () => {
         document.getElementById('startDate').valueAsDate = new Date();
         updateData();
