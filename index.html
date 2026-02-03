@@ -10,6 +10,7 @@
             --secondary: #b21f1f;
             --success: #27ae60;
             --text: #333;
+            --disabled-bg: #f0f2f5;
         }
 
         body {
@@ -49,6 +50,14 @@
 
         input:focus { outline: none; border-color: var(--primary); }
 
+        /* Style for Non-Editable Fields */
+        input[readonly] {
+            background-color: var(--disabled-bg);
+            border-color: #d1d5db;
+            color: #777;
+            cursor: not-allowed;
+        }
+
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
         .btn-print {
@@ -70,11 +79,11 @@
 
         .btn-print:hover { background: #0d1a4d; }
 
-        /* --- PRINT AREA STYLING (A4 Layout) --- */
+        /* --- PRINT AREA STYLING --- */
         #printable-area { display: none; }
 
         @media print {
-            @page { size: A4; margin: 10mm; } /* Adjusted margin for more space */
+            @page { size: A4; margin: 10mm; }
             .form-container { display: none; }
             #printable-area { display: block; background: white; color: black; font-size: 12px; }
             
@@ -86,12 +95,11 @@
             table th, table td { border: 1px solid #666; padding: 6px; text-align: left; vertical-align: middle; }
             table th { background: #f0f0f0; text-align: center; font-weight: bold; }
 
-            /* Specific column widths for the schedule */
             .col-no { width: 5%; text-align: center; }
             .col-date { width: 15%; text-align: center; }
             .col-amount { width: 20%; text-align: right; }
-            .col-paid-date { width: 20%; } /* Blank for writing */
-            .col-sign { width: 40%; } /* Bigger space for signature */
+            .col-paid-date { width: 20%; }
+            .col-sign { width: 40%; }
 
             .penalty-text { color: #b21f1f; font-weight: bold; font-style: italic; }
 
@@ -109,7 +117,7 @@
 <div class="form-container">
     <div class="header">
         <h1>LOAN MANAGEMENT SYSTEM</h1>
-        <p>Complete the details below to generate the agreement</p>
+        <p>Fill out borrower details. Duration and Rate are fixed.</p>
     </div>
 
     <div class="input-group">
@@ -140,13 +148,13 @@
         </div>
         <div class="input-group">
             <label>Loan Duration (Months)</label>
-            <input type="number" id="months" value="1" oninput="updateData()">
+            <input type="number" id="months" value="2" readonly>
         </div>
     </div>
 
     <div class="input-group">
         <label>Interest Rate (%)</label>
-        <input type="number" id="interestRate" value="20" oninput="updateData()">
+        <input type="number" id="interestRate" value="20" readonly>
     </div>
 
     <div class="input-group" style="display: none;">
@@ -202,8 +210,7 @@
 
     <div class="doc-section">
         <h3>III. REPAYMENT SCHEDULE & ACKNOWLEDGMENT</h3>
-        <p>The borrower agrees to pay <strong id="p-semi">0.00</strong> every 15 days. <br>
-        <em>Please sign below upon payment of each installment.</em></p>
+        <p>The borrower agrees to pay <strong id="p-semi">0.00</strong> every 15 days for 2 months (4 installments).</p>
         
         <table id="schedule-table">
             <thead>
@@ -226,13 +233,6 @@
             In case of failure to pay any installment on its due date, the Borrower agrees to pay a penalty charge of 
             <strong><span id="p-text-penalty-rate">5</span>%</strong> of the Principal Amount, equivalent to 
             <strong><span id="p-text-penalty-amt">0.00</span></strong>, for every month of delay. 
-            This is in addition to the regular interest.
-        </p>
-    </div>
-
-    <div class="doc-section">
-        <p style="font-size: 10px; color: #555; margin-top: 20px;">
-            By signing this document, the borrower acknowledges the receipt of the principal amount and agrees to the terms above.
         </p>
     </div>
 
@@ -245,9 +245,7 @@
 <script>
     function formatInput(input) {
         let value = input.value.replace(/,/g, '');
-        if(isNaN(value) && value !== '.') {
-           value = value.replace(/[^0-9.]/g, ''); 
-        }
+        if(isNaN(value) && value !== '.') { value = value.replace(/[^0-9.]/g, ''); }
         const parts = value.split('.');
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         input.value = parts.join('.');
@@ -264,51 +262,43 @@
         const contact = document.getElementById('contact').value;
         
         const principal = getCleanNumber('principal');
-        const rate = parseFloat(document.getElementById('interestRate').value) || 0;
-        const penaltyRate = parseFloat(document.getElementById('penaltyRate').value) || 0;
-        
-        const months = parseFloat(document.getElementById('months').value) || 0;
-        const startDate = document.getElementById('startDate').value;
+        const rate = 20; // Fixed
+        const months = 2; // Fixed
+        const penaltyRate = getCleanNumber('penaltyRate') || 5;
 
         const interest = principal * (rate / 100);
         const total = principal + interest;
-        const installments = months * 2;
+        const installments = months * 2; // Fixed to 4
         const perPeriod = installments > 0 ? total / installments : 0;
-        
         const penaltyAmount = principal * (penaltyRate / 100);
+
+        const formatMoney = (amount) => amount.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
 
         document.getElementById('p-current-date').innerText = new Date().toLocaleDateString('en-US', {dateStyle: 'long'});
         document.getElementById('p-name').innerText = name.toUpperCase();
         document.getElementById('p-address').innerText = address;
         document.getElementById('p-contact').innerText = contact;
-        
-        const formatMoney = (amount) => amount.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
-
         document.getElementById('p-principal').innerText = formatMoney(principal);
-        document.getElementById('p-rate').innerText = rate;
         document.getElementById('p-interest').innerText = formatMoney(interest);
         document.getElementById('p-total').innerText = formatMoney(total);
         document.getElementById('p-semi').innerText = formatMoney(perPeriod);
-        // document.getElementById('p-start').innerText = startDate ? new Date(startDate).toLocaleDateString('en-US', {dateStyle: 'long'}) : '---';
-
-        // Update Penalty Info
-        document.getElementById('p-penalty-rate').innerText = penaltyRate;
         document.getElementById('p-penalty-amount').innerText = formatMoney(penaltyAmount);
-        
-        document.getElementById('p-text-penalty-rate').innerText = penaltyRate;
         document.getElementById('p-text-penalty-amt').innerText = formatMoney(penaltyAmount);
 
         const tableBody = document.getElementById('p-schedule-body');
         tableBody.innerHTML = '';
+        const startDateVal = document.getElementById('startDate').value;
 
-        if(startDate && installments > 0) {
-            let currentDate = new Date(startDate);
+        if(startDateVal) {
+            let currentDate = new Date(startDateVal);
             for(let i = 1; i <= installments; i++) {
                 const row = `<tr>
                     <td style="text-align: center;">${i}</td>
                     <td style="text-align: center;">${currentDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: '2-digit'})}</td>
                     <td style="text-align: right; font-weight: bold;">${formatMoney(perPeriod)}</td>
-                    <td></td> <td></td> </tr>`;
+                    <td></td>
+                    <td></td>
+                </tr>`;
                 tableBody.innerHTML += row;
                 currentDate.setDate(currentDate.getDate() + 15);
             }
