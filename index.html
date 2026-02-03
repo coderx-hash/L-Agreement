@@ -74,21 +74,28 @@
         #printable-area { display: none; }
 
         @media print {
-            @page { size: A4; margin: 15mm; }
+            @page { size: A4; margin: 10mm; } /* Adjusted margin for more space */
             .form-container { display: none; }
             #printable-area { display: block; background: white; color: black; font-size: 12px; }
             
-            .doc-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
-            .doc-section { margin-bottom: 20px; }
-            .doc-section h3 { border-left: 4px solid #000; padding-left: 10px; font-size: 14px; margin-bottom: 10px; background: #f2f2f2; padding-top: 5px; padding-bottom: 5px; }
+            .doc-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+            .doc-section { margin-bottom: 15px; }
+            .doc-section h3 { border-left: 4px solid #000; padding-left: 10px; font-size: 13px; margin-bottom: 8px; background: #f2f2f2; padding-top: 5px; padding-bottom: 5px; }
             
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            table th { background: #f9f9f9; }
+            table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 11px; }
+            table th, table td { border: 1px solid #666; padding: 6px; text-align: left; vertical-align: middle; }
+            table th { background: #f0f0f0; text-align: center; font-weight: bold; }
+
+            /* Specific column widths for the schedule */
+            .col-no { width: 5%; text-align: center; }
+            .col-date { width: 15%; text-align: center; }
+            .col-amount { width: 20%; text-align: right; }
+            .col-paid-date { width: 20%; } /* Blank for writing */
+            .col-sign { width: 40%; } /* Bigger space for signature */
 
             .penalty-text { color: #b21f1f; font-weight: bold; font-style: italic; }
 
-            .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 50px; }
+            .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 40px; }
             .sig-line { border-top: 1px solid black; text-align: center; padding-top: 5px; font-weight: bold; }
         }
 
@@ -194,14 +201,18 @@
     </div>
 
     <div class="doc-section">
-        <h3>III. REPAYMENT SCHEDULE (Semi-Monthly)</h3>
-        <p>The borrower agrees to pay the amount of <strong id="p-semi">0.00</strong> every 15 days starting on <strong id="p-start"></strong>.</p>
+        <h3>III. REPAYMENT SCHEDULE & ACKNOWLEDGMENT</h3>
+        <p>The borrower agrees to pay <strong id="p-semi">0.00</strong> every 15 days. <br>
+        <em>Please sign below upon payment of each installment.</em></p>
+        
         <table id="schedule-table">
             <thead>
                 <tr>
-                    <th>Installment No.</th>
-                    <th>Due Date</th>
-                    <th>Amount Due</th>
+                    <th class="col-no">#</th>
+                    <th class="col-date">Due Date</th>
+                    <th class="col-amount">Amount Due</th>
+                    <th class="col-paid-date">Actual Date Paid</th>
+                    <th class="col-sign">Borrower's Signature</th>
                 </tr>
             </thead>
             <tbody id="p-schedule-body">
@@ -214,14 +225,14 @@
         <p style="text-align: justify;">
             In case of failure to pay any installment on its due date, the Borrower agrees to pay a penalty charge of 
             <strong><span id="p-text-penalty-rate">5</span>%</strong> of the Principal Amount, equivalent to 
-            <strong><span id="p-text-penalty-amt">0.00</span></strong>, for every month of delay (or a fraction thereof). 
-            This is in addition to the regular interest and principal amortization.
+            <strong><span id="p-text-penalty-amt">0.00</span></strong>, for every month of delay. 
+            This is in addition to the regular interest.
         </p>
     </div>
 
     <div class="doc-section">
-        <p style="font-size: 10px; color: #555; margin-top: 30px;">
-            By signing this document, the borrower acknowledges the receipt of the principal amount and agrees to the terms, interest rates, and penalty clauses stated above.
+        <p style="font-size: 10px; color: #555; margin-top: 20px;">
+            By signing this document, the borrower acknowledges the receipt of the principal amount and agrees to the terms above.
         </p>
     </div>
 
@@ -254,8 +265,6 @@
         
         const principal = getCleanNumber('principal');
         const rate = parseFloat(document.getElementById('interestRate').value) || 0;
-        
-        // Kinukuha pa rin natin yung value ng hidden penalty rate (default 5)
         const penaltyRate = parseFloat(document.getElementById('penaltyRate').value) || 0;
         
         const months = parseFloat(document.getElementById('months').value) || 0;
@@ -280,9 +289,9 @@
         document.getElementById('p-interest').innerText = formatMoney(interest);
         document.getElementById('p-total').innerText = formatMoney(total);
         document.getElementById('p-semi').innerText = formatMoney(perPeriod);
-        document.getElementById('p-start').innerText = startDate ? new Date(startDate).toLocaleDateString('en-US', {dateStyle: 'long'}) : '---';
+        // document.getElementById('p-start').innerText = startDate ? new Date(startDate).toLocaleDateString('en-US', {dateStyle: 'long'}) : '---';
 
-        // Update Penalty Information (Sa Print lang makikita)
+        // Update Penalty Info
         document.getElementById('p-penalty-rate').innerText = penaltyRate;
         document.getElementById('p-penalty-amount').innerText = formatMoney(penaltyAmount);
         
@@ -296,10 +305,10 @@
             let currentDate = new Date(startDate);
             for(let i = 1; i <= installments; i++) {
                 const row = `<tr>
-                    <td>Installment ${i}</td>
-                    <td>${currentDate.toLocaleDateString('en-US', {dateStyle: 'medium'})}</td>
-                    <td>${formatMoney(perPeriod)}</td>
-                </tr>`;
+                    <td style="text-align: center;">${i}</td>
+                    <td style="text-align: center;">${currentDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: '2-digit'})}</td>
+                    <td style="text-align: right; font-weight: bold;">${formatMoney(perPeriod)}</td>
+                    <td></td> <td></td> </tr>`;
                 tableBody.innerHTML += row;
                 currentDate.setDate(currentDate.getDate() + 15);
             }
