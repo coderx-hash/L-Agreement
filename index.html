@@ -137,19 +137,18 @@
         </div>
     </div>
 
-    <div class="grid-2">
-        <div class="input-group">
-            <label>Interest Rate (%)</label>
-            <input type="number" id="interestRate" value="20" oninput="updateData()">
-        </div>
-        <div class="input-group">
-            <label style="color: #b21f1f;">Penalty Rate on Delay (%)</label>
-            <input type="number" id="penaltyRate" value="5" oninput="updateData()">
-        </div>
+    <div class="input-group">
+        <label>Interest Rate (%)</label>
+        <input type="number" id="interestRate" value="20" oninput="updateData()">
+    </div>
+
+    <div class="input-group" style="display: none;">
+        <label>Penalty Rate on Delay (%)</label>
+        <input type="number" id="penaltyRate" value="5" oninput="updateData()">
     </div>
 
     <button class="btn-print" onclick="window.print()">
-        <span>🖨️</span> PRINT LOAN AGREEMENT
+        <span>🖨️</span> SAVE AS PDF / PRINT
     </button>
 </div>
 
@@ -233,62 +232,47 @@
 </div>
 
 <script>
-    // --- Helper to format number with commas while typing ---
     function formatInput(input) {
-        // Remove existing commas to get raw value
         let value = input.value.replace(/,/g, '');
-        
-        // Ensure only numbers and one dot
         if(isNaN(value) && value !== '.') {
            value = value.replace(/[^0-9.]/g, ''); 
         }
-
-        // Split integer and decimal parts
         const parts = value.split('.');
-        
-        // Add commas to integer part
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        
-        // Join back
         input.value = parts.join('.');
     }
 
-    // --- Helper to get clean number for calculation ---
     function getCleanNumber(id) {
         const val = document.getElementById(id).value;
-        // Remove commas before parsing to float
         return parseFloat(val.replace(/,/g, '')) || 0;
     }
 
     function updateData() {
-        // Get Values
         const name = document.getElementById('name').value;
         const address = document.getElementById('address').value;
         const contact = document.getElementById('contact').value;
         
-        // Use clean number function for Principal
         const principal = getCleanNumber('principal');
         const rate = parseFloat(document.getElementById('interestRate').value) || 0;
+        
+        // Kinukuha pa rin natin yung value ng hidden penalty rate (default 5)
         const penaltyRate = parseFloat(document.getElementById('penaltyRate').value) || 0;
+        
         const months = parseFloat(document.getElementById('months').value) || 0;
         const startDate = document.getElementById('startDate').value;
 
-        // Calculations
         const interest = principal * (rate / 100);
         const total = principal + interest;
         const installments = months * 2;
         const perPeriod = installments > 0 ? total / installments : 0;
         
-        // Calculate Penalty Amount (Based on Principal)
         const penaltyAmount = principal * (penaltyRate / 100);
 
-        // Update Labels in Print View
         document.getElementById('p-current-date').innerText = new Date().toLocaleDateString('en-US', {dateStyle: 'long'});
         document.getElementById('p-name').innerText = name.toUpperCase();
         document.getElementById('p-address').innerText = address;
         document.getElementById('p-contact').innerText = contact;
         
-        // Currency Formatting
         const formatMoney = (amount) => amount.toLocaleString('en-US', {style: 'currency', currency: 'PHP'});
 
         document.getElementById('p-principal').innerText = formatMoney(principal);
@@ -298,15 +282,13 @@
         document.getElementById('p-semi').innerText = formatMoney(perPeriod);
         document.getElementById('p-start').innerText = startDate ? new Date(startDate).toLocaleDateString('en-US', {dateStyle: 'long'}) : '---';
 
-        // Update Penalty Information
+        // Update Penalty Information (Sa Print lang makikita)
         document.getElementById('p-penalty-rate').innerText = penaltyRate;
         document.getElementById('p-penalty-amount').innerText = formatMoney(penaltyAmount);
         
-        // Update Text Clause
         document.getElementById('p-text-penalty-rate').innerText = penaltyRate;
         document.getElementById('p-text-penalty-amt').innerText = formatMoney(penaltyAmount);
 
-        // Generate Schedule Table
         const tableBody = document.getElementById('p-schedule-body');
         tableBody.innerHTML = '';
 
@@ -319,14 +301,11 @@
                     <td>${formatMoney(perPeriod)}</td>
                 </tr>`;
                 tableBody.innerHTML += row;
-                
-                // Add 15 days
                 currentDate.setDate(currentDate.getDate() + 15);
             }
         }
     }
 
-    // Initialize on load
     window.onload = () => {
         document.getElementById('startDate').valueAsDate = new Date();
         updateData();
